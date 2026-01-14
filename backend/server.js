@@ -1,3 +1,5 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 import express from "express";
 import axios from "axios";
 import cors from "cors";
@@ -60,7 +62,8 @@ app.post("/api/hyperverge/token", async (req, res) => {
       }
     );
 
-    const token = response.data?.result?.token;
+    console.log(response)
+    const token = response.data?.result?.authToken;
 
     if (!token) {
       throw new Error("Token not received from HyperVerge");
