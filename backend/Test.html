@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>HyperKYC Web SDK – Multiple Workflows</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- HyperKYC SDK -->
+  <script src="https://hv-web-sdk-cdn.hyperverge.co/hyperverge-web-sdk@9.17.0/src/sdk.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 420px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    button {
+      background: #4CAF50;
+      color: white;
+      padding: 14px;
+      width: 100%;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-bottom: 16px;
+    }
+
+    button.secondary {
+      background: #2196F3;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>HyperKYC Web SDK Demo</h2>
+
+  <button onclick="startWorkflow('digi_test1')">
+    Start KYC – Workflow A
+  </button>
+
+  <button class="secondary" onclick="startWorkflow('digi_test2')">
+    Start KYC – Workflow B
+  </button>
+
+  <script>
+    const appId = "t8no7t";
+
+    /**
+     * Fetch fresh token + transactionId from backend
+     */
+    async function fetchToken(workflowId) {
+      const response = await fetch("/api/hyperverge/token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ workflowId })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch HyperVerge token");
+      }
+
+      return response.json();
+    }
+
+    /**
+     * Launch HyperKYC Web SDK
+     */
+    async function launchKYC(jwtToken, workflowID, transactionID) {
+      const hyperKycConfig = new HyperKycConfig(
+        jwtToken,
+        workflowID,
+        transactionID,
+        true // show landing page
+      );
+
+      HyperKYCModule.prefetch(appId, workflowID);
+
+      hyperKycConfig.supportDarkMode(true);
+      hyperKycConfig.setInitialLoaderColor("#4CAF50");
+
+      HyperKYCModule.launch(hyperKycConfig, (result) => {
+        console.log("KYC Result:", result);
+
+        switch (result.status) {
+          case "user_cancelled":
+            alert("User cancelled KYC");
+            break;
+          case "auto_approved":
+            alert("KYC auto-approved");
+            break;
+          case "auto_declined":
+            alert("KYC auto-declined");
+            break;
+          case "needs_review":
+            alert("KYC needs manual review");
+            break;
+          case "error":
+            alert("KYC error occurred");
+            console.error(result);
+            break;
+          default:
+            console.warn("Unknown status:", result.status);
+        }
+      });
+    }
+
+    /**
+     * Entry point for both workflows
+     */
+    async function startWorkflow(workflowId) {
+      try {
+        const { token, transactionId } = await fetchToken(workflowId);
+        await launchKYC(token, workflowId, transactionId);
+      } catch (err) {
+        console.error(err);
+        alert("Unable to start KYC");
+      }
+    }
+  </script>
+
+</body>
+</html>

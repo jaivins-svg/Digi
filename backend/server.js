@@ -2,41 +2,56 @@ import express from "express";
 import axios from "axios";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
 const app = express();
 
+/* Needed for ES modules (__dirname replacement) */
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+/* Middleware */
 app.use(cors());
 app.use(express.json());
 
+/* Serve static files (Test.html) */
+app.use(express.static(__dirname));
+
+/* Root → loads Test.html */
 app.get("/", (req, res) => {
-  res.send("HyperVerge backend running");
+  res.sendFile(path.join(__dirname, "Test.html"));
 });
 
 /**
- * Token generation with authenticateOnResume = yes
+ * Generate HyperVerge token
+ * authenticateOnResume = yes
  */
 app.post("/api/hyperverge/token", async (req, res) => {
-  const { workflowId, transactionId } = req.body;
+  const { workflowId } = req.body;
 
-  if (!workflowId || !transactionId) {
+  if (!workflowId) {
     return res.status(400).json({
-      error: "workflowId and transactionId are required"
+      error: "workflowId is required"
     });
   }
+
+  // 🔁 Generate new transactionId EVERY TIME
+  const transactionId = `TXN_${Date.now()}`;
 
   try {
     const response = await axios.post(
       "https://ind-state.idv.hyperverge.co/v2/auth/token",
       {
-        appId: process.env.t8no7t,
-        appKey: process.env.mgfypp59rq8zli15wlwc,
-        expiry: 86400,                 // 24 hours
+        appId: process.env.HYPERVERGE_APP_ID,
+        appKey: process.env.HYPERVERGE_APP_KEY,
+        expiry: 86400,
         workflowId,
         transactionId,
-        authenticateOnResume: "yes",   // 🔑 IMPORTANT
-        mobileNumber: "8291027727"     // 🔑 REQUIRED for resume
+        authenticateOnResume: "yes",
+        mobileNumber: "8291027727"
       },
       {
         headers: {
@@ -58,7 +73,7 @@ app.post("/api/hyperverge/token", async (req, res) => {
 
   } catch (error) {
     console.error(
-      "HyperVerge token error:",
+      "❌ HyperVerge token error:",
       error.response?.data || error.message
     );
 
@@ -68,7 +83,8 @@ app.post("/api/hyperverge/token", async (req, res) => {
   }
 });
 
+/* Start server */
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
-  console.log(`✅ Backend running on http://localhost:${PORT}`);
+  console.log(`✅ Backend running at http://localhost:${PORT}`);
 });
